@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assignació de Diputats - Província de València</title>
+  <style>
+    :root {
+      --primary: #0d9488;
+      --primary-hover: #0f766e;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 2rem 1rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      color: #64748b;
+      font-size: 0.95rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      border: 1px solid var(--border);
+    }
+
+    .card-title {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+
+    .config-group {
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .config-group label {
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    .config-group input {
+      width: 80px;
+      padding: 0.4rem 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    .party-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      align-items: center;
+    }
+
+    input[type="text"], input[type="number"] {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+
+    .party-name {
+      flex: 2;
+    }
+
+    .party-votes {
+      flex: 1;
+    }
+
+    .btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-danger {
+      background-color: #ef4444;
+      color: white;
+      padding: 0.5rem 0.75rem;
+    }
+
+    .btn-danger:hover {
+      background-color: #dc2626;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background-color: #f1f5f9;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .excluded {
+      color: #94a3b8;
+      font-style: italic;
+    }
+
+    .total-badge {
+      display: inline-block;
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Assignació de Diputats - Província de València</h1>
+    <p class="subtitle">Simulador electoral basat en el mètode D'Hondt amb barrera electoral del 3%</p>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <h2 class="card-title">Introducció de Dades</h2>
+      
+      <div class="config-group">
+        <label for="seats">Diputats a assignar:</label>
+        <input type="number" id="seats" value="16" min="1" onchange="calculateDondt()">
+      </div>
+
+      <div id="parties-container"></div>
+
+      <div class="actions">
+        <button class="btn btn-primary" onclick="addParty()">+ Afegir partit</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Resultats de l'Assignació</h2>
+      <p id="total-votes-info" class="subtitle" style="margin-bottom: 1rem;"></p>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Partit</th>
+            <th>Vots</th>
+            <th>% Vots</th>
+            <th>Diputats</th>
+          </tr>
+        </thead>
+        <tbody id="results-table">
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let parties = [
+      { id: 1, name: "Partit A", votes: 245000 },
+      { id: 2, name: "Partit B", votes: 180500 },
+      { id: 3, name: "Partit C", votes: 120000 },
+      { id: 4, name: "Partit D", votes: 75300 },
+      { id: 5, name: "Partit E", votes: 15000 }
+    ];
+
+    let nextId = 6;
+
+    function renderInputs() {
+      const container = document.getElementById('parties-container');
+      container.innerHTML = '';
+
+      parties.forEach((party) => {
+        const row = document.createElement('div');
+        row.className = 'party-row';
+        row.innerHTML = `
+          <input type="text" class="party-name" value="${party.name}" placeholder="Nom del partit" oninput="updateParty(${party.id}, 'name', this.value)">
+          <input type="number" class="party-votes" value="${party.votes}" placeholder="Vots" min="0" oninput="updateParty(${party.id}, 'votes', this.value)">
+          <button class="btn btn-danger" onclick="removeParty(${party.id})">✕</button>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    function addParty() {
+      parties.push({ id: nextId++, name: `Partit ${String.fromCharCode(65 + parties.length)}`, votes: 0 });
+      renderInputs();
+      calculateDondt();
+    }
+
+    function removeParty(id) {
+      if (parties.length <= 1) return;
+      parties = parties.filter(p => p.id !== id);
+      renderInputs();
+      calculateDondt();
+    }
+
+    function updateParty(id, field, value) {
+      const party = parties.find(p => p.id === id);
+      if (party) {
+        if (field === 'votes') {
+          party.votes = Math.max(0, parseInt(value) || 0);
+        } else {
+          party.name = value;
+        }
+        calculateDondt();
+      }
+    }
+
+    function calculateDondt() {
+      const totalSeats = parseInt(document.getElementById('seats').value) || 16;
+      const totalVotes = parties.reduce((sum, p) => sum + p.votes, 0);
+      
+      document.getElementById('total-votes-info').innerText = `Total de vots emesos: ${totalVotes.toLocaleString('ca-ES')}`;
+
+      const threshold = totalVotes * 0.03;
+      const eligibleParties = parties.map(p => ({
+        ...p,
+        pct: totalVotes > 0 ? (p.votes / totalVotes) * 100 : 0,
+        isEligible: p.votes >= threshold && p.votes > 0,
+        seats: 0
+      }));
+
+      if (totalVotes > 0) {
+        let quotients = [];
+        
+        eligibleParties.forEach((party) => {
+          if (party.isEligible) {
+            for (let i = 1; i <= totalSeats; i++) {
+              quotients.push({
+                partyId: party.id,
+                value: party.votes / i
+              });
+            }
+          }
+        });
+
+        quotients.sort((a, b) => b.value - a.value);
+
+        const winningQuotients = quotients.slice(0, totalSeats);
+        winningQuotients.forEach(q => {
+          const party = eligibleParties.find(p => p.id === q.partyId);
+          if (party) party.seats++;
+        });
+      }
+
+      const tableBody = document.getElementById('results-table');
+      tableBody.innerHTML = '';
+
+      eligibleParties.forEach(party => {
+        const tr = document.createElement('tr');
+        if (!party.isEligible && party.votes > 0) {
+          tr.className = 'excluded';
+        }
+
+        tr.innerHTML = `
+          <td><strong>${party.name || 'Sense nom'}</strong></td>
+          <td>${party.votes.toLocaleString('ca-ES')}</td>
+          <td>${party.pct.toFixed(2)}% ${!party.isEligible && party.votes > 0 ? '<small>(< 3%)</small>' : ''}</td>
+          <td><span class="total-badge">${party.seats}</span></td>
+        `;
+        tableBody.appendChild(tr);
+      });
+    }
+
+    renderInputs();
+    calculateDondt();
+  </script>
+</body>
+</html>
